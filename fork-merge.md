@@ -1,249 +1,291 @@
 # Fork Maintenance Guide
 
-This guide explains how to maintain your own fork of ani-cli when you don't plan to create pull requests to the original repository.
+This guide explains how to maintain a personal fork of ani-cli when you want to keep it completely disconnected from the original repository, never contribute back, but still benefit from upstream updates.
 
-## Why Fork?
+## Your Goal: Independent Fork with Optional Upstream Sync
 
-**Forking lets you:**
-- Create a personal, independent version of ani-cli
-- Make custom modifications without affecting the original
-- Optionally pull updates from the original when beneficial
-- Maintain control over which changes you accept
+**You want to:**
+- Maintain a completely independent version of ani-cli
+- Never create pull requests or contribute back to the original
+- Periodically pull updates from the original repo INTO your fork
+- Keep your customizations while benefiting from upstream improvements
 
-**Why NOT contribute back via PR?**
-- You may have personal customizations not suitable for general use
-- You want complete control over the codebase
-- You're maintaining a specialized variant
-- You simply want to experiment freely
-
-## Overview
-
-Your fork becomes your **primary codebase** - a personal version that you maintain independently. You can still pull updates from the original repository when desired.
+**Why this approach?**
+- **Complete independence**: Your fork is yours alone - no obligations to upstream
+- **Freedom to customize**: Change anything without worrying about compatibility with original
+- **Selective updates**: Choose which upstream improvements to incorporate
+- **No coordination overhead**: Don't need to discuss changes, follow project conventions, or wait for approvals
+- **Stable base**: Original repo provides bug fixes and features you can optionally adopt
 
 ## Initial Setup
 
 ### 1. Fork on GitHub
 
-**Why:** Creates your own copy under your GitHub account where you have full write access.
+Creates your own isolated copy with full control:
 
-- Go to https://github.com/pystardust/ani-cli
-- Click the "Fork" button
-- Choose your account/organization
+```bash
+# Go to https://github.com/pystardust/ani-cli
+# Click "Fork" → Choose your account
+```
 
 ### 2. Clone Your Fork
 
-**Why:** You clone YOUR fork (not the original) so your commits push to your fork by default.
+Clone YOUR fork (becomes your primary workspace):
 
 ```bash
-# Clone YOUR fork (not the original)
 git clone https://github.com/YOUR-USERNAME/ani-cli.git
 cd ani-cli
-
-# Add original repo as "upstream" remote
-# Why: This gives you access to updates from the original without changing your default push target
-git remote add upstream https://github.com/pystardust/ani-cli.git
-
-# Verify your remotes
-git remote -v
-# Should show:
-# origin    https://github.com/YOUR-USERNAME/ani-cli.git (fetch/push)
-# upstream  https://github.com/pystardust/ani-cli.git (fetch/push)
 ```
 
-## Remote Structure
+### 3. Add Upstream (One-Way Read-Only)
 
-**Two remotes exist for different purposes:**
-
-- **origin** = Your fork (where you push your personal changes)
-  - Why: This is your personal copy where you have full control
-  
-- **upstream** = Original pystardust/ani-cli (where you pull updates from)
-  - Why: You can fetch updates from the original without affecting your workflow
-
-**Why two remotes?** 
-- Separates where you push (your fork) from where you might pull updates (original)
-- Allows you to work independently while staying optionally connected to improvements
-
-## Maintenance Workflow
-
-### Pulling Updates from Original Repo
-
-**Why do this?** To benefit from bug fixes, security patches, and new features developed by the original maintainers without losing your customizations.
+Add original repo ONLY for reading updates (you'll never push here):
 
 ```bash
-# Fetch latest changes from original repo
-# Why: Downloads updates without applying them yet (safe to inspect first)
-git fetch upstream
+# Add upstream as read-only source of updates
+git remote add upstream https://github.com/pystardust/ani-cli.git
 
-# Checkout your local master branch
-# Why: Ensures you're on the right branch before merging
-git checkout master
-
-# Merge upstream changes into your local branch
-# Why: Combines original updates with your customizations
-git merge upstream/master
-
-# Push the merged changes to your fork
-# Why: Updates your GitHub fork with the merged changes
-git push origin master
+# Verify: origin is your fork, upstream is original
+git remote -v
+# origin    https://github.com/YOUR-USERNAME/ani-cli.git (fetch/push)
+# upstream  https://github.com/pystardust/ani-cli.git (fetch)
 ```
+
+## The One-Way Sync Model
+
+**Visual representation:**
+```
+Original Repo (pystardust/ani-cli)
+        ↓ (you pull updates FROM here)
+        ↓
+Your Fork (YOUR-USERNAME/ani-cli)
+        ↑ (you push your changes here)
+        ↑
+   Your Local Machine
+```
+
+**Key principle:** Updates flow DOWNSTREAM from original to your fork. Your changes never flow upstream.
+
+## Daily Workflow
 
 ### Making Your Own Changes
 
-**Why:** Your fork is independent - you can modify anything without permission or affecting others.
+Work on your fork independently:
 
 ```bash
-# Edit files as needed...
+# Edit files
+vim ani-cli
 
-# Stage and commit
-vim ani-cli              # Make your edits
+# Commit to your fork
+./ani-cli --help  # Test your changes
 git add ani-cli
-git commit -m "Your custom changes"
+git commit -m "My custom feature"
+git push origin master  # Only goes to YOUR fork
+```
 
-# Push to YOUR fork only
-# Why: origin is your fork, so this goes to your personal version
+**Why push only to origin?**
+- `origin` is YOUR fork - you have full control
+- You never push to upstream (original repo) - you don't have permission and don't want to
+- Your changes stay isolated in your fork
+
+### Periodic Upstream Sync
+
+Every month or when you notice important updates, pull from original:
+
+```bash
+# Fetch latest from original (read-only)
+git fetch upstream
+
+# See what changed (optional review)
+git log upstream/master --oneline -10
+
+# Merge into your local branch
+git checkout master
+git merge upstream/master
+
+# Resolve any conflicts (choose your version when in doubt)
+# Test the merged code
+./ani-cli --help
+
+# Push merged result to your fork
 git push origin master
 ```
 
-## When to Sync with Upstream
+**Why this workflow?**
+- Fetches updates without disturbing your work
+- Lets you review changes before merging
+- Merges upstream improvements into your codebase
+- Your customizations are preserved (unless they conflict)
+- Conflicts = you decide which version wins
 
-**Why periodically sync?** 
-- Original repo gets bug fixes you don't want to miss
-- Security patches protect you from vulnerabilities
-- New features may be useful for your custom version
-- Dependency updates ensure compatibility
-- Prevents technical debt from accumulating
+## Conflict Resolution Philosophy
 
-**Periodically pull from upstream** (recommended monthly or when you notice important updates):
+When merging upstream creates conflicts, you have three options:
 
-- Bug fixes and security patches
-- New features you want to use
-- Dependency updates
-- Compatibility improvements
+1. **Accept upstream changes** - Abandon your customization for their improvement
+2. **Keep your changes** - Reject their modification, keep yours
+3. **Merge manually** - Combine both changes intelligently
 
-**Benefits of periodic syncing:**
-- Your fork stays current with important fixes
-- You can cherry-pick which upstream changes to keep
-- Prevents conflicts from piling up over time
-- Easier to resolve issues when they arise
+**Your priority order:**
+1. Does upstream fix a bug you're affected by? → Take upstream
+2. Does upstream break your customization? → Keep yours
+3. Can both coexist? → Merge them
 
-**If you NEVER want upstream changes:**
-- Don't add the upstream remote
-- Your fork becomes completely independent
-- You'll maintain your own version entirely
-- Why do this? Complete isolation from upstream decisions/changes
+Example:
+```bash
+git merge upstream/master
+# CONFLICT in ani-cli
 
-## Quick Sync Alias
+# View conflict markers
+vim ani-cli
 
-**Why:** Typing the full sync command repeatedly is tedious. An alias saves time and reduces errors.
+# Decide: keep yours, take theirs, or combine
+git checkout --ours ani-cli      # Keep YOUR version
+git checkout --theirs ani-cli    # Take UPSTREAM version
+# OR manually edit to combine
 
-Add this to your `~/.gitconfig` for easier syncing:
-
-```ini
-[alias]
-    sync-upstream = "!git fetch upstream && git checkout master && git merge upstream/master && git push origin master"
+git add ani-cli
+git commit
+git push origin master
 ```
 
-Then simply run:
+## Automation Options
+
+### Option 1: Manual Sync (Recommended)
+
+Full control over when and what to sync:
+
 ```bash
+# Add this alias to ~/.gitconfig
+git config --global alias.sync-upstream '!git fetch upstream && git checkout master && git merge upstream/master && git push origin master'
+
+# Use it monthly
+
+
 git sync-upstream
 ```
 
-## Handling Merge Conflicts
+**Why manual?** 
+- Review changes before applying
+- Test merged code works
+- Decide conflict resolution case-by-case
+- Avoid surprise breakages
 
-**Why conflicts happen:** When you modify code that upstream also modified, Git can't automatically decide which version to keep.
+### Option 2: Automated Daily Fetch
+
+If you want to stay current automatically:
 
 ```bash
+# Create a script ~/bin/sync-ani-cli.sh
+#!/bin/bash
+cd ~/ani-cli || exit 1
 git fetch upstream
 git checkout master
-git merge upstream/master
-
-# If conflicts occur:
-# 1. Edit the conflicting files
-# 2. Choose which changes to keep (yours or upstream)
-#    Why: You're the maintainer - you decide what works for your fork
-# 3. Stage resolved files: git add <file>
-# 4. Complete merge: git commit
-# 5. Push to your fork: git push origin master
+git merge upstream/master --no-edit || exit 1
+git push origin master
 ```
 
-**Why handle conflicts promptly?**
-- Conflicts get harder to resolve the longer you wait
-- Regular small syncs prevent massive conflict pile-ups
-- Keeps your fork functional and up-to-date
-
-## Common Scenarios
-
-### Scenario 1: Update Your Fork with Latest Changes
-
-**Why:** You want the latest bug fixes without losing your customizations.
-
+Add to crontab for weekly runs:
 ```bash
-git fetch upstream
-git checkout master
-git merge upstream/master
-git push origin master
+0 9 * * 1 ~/bin/sync-ani-cli.sh  # Every Monday at 9am
 ```
 
-### Scenario 2: Your Custom Changes + Upstream Updates
+**Why automate?**
+- Stay current with minimal effort
+- Always have latest bug fixes
+- But: may introduce untested changes
 
-**Why:** You're actively developing your own features while still benefiting from upstream improvements.
+## What If You Never Sync?
 
-```bash
-# Make your changes
-git add .
-git commit -m "Custom feature"
-git push origin master
+**Consequences of never pulling from upstream:**
+- **Bug accumulation**: Known bugs in original remain in your fork
+- **Security issues**: Unpatched vulnerabilities persist
+- **Compatibility drift**: Dependencies change, your fork breaks
+- **Feature gap**: Miss useful new features
+- **Maintenance burden**: You fix problems already solved upstream
 
-# Later, get upstream updates
-git fetch upstream
-git merge upstream/master
-# Resolve any conflicts if needed
-git push origin master
-```
+**When to skip syncing:**
+- Your fork works perfectly for your use case
+- Original repo direction diverges from your needs
+- You don't need new features
+- Breaking changes outweigh benefits
 
-### Scenario 3: Completely Independent Fork
-
-**Why:** You want total isolation - no connection to upstream whatsoever. Good for experimental variants or completely different directions.
-
-```bash
-# Don't add upstream remote
-# Just work with origin (your fork)
-git clone https://github.com/YOUR-USERNAME/ani-cli.git
-
-# Make changes and push to your fork only
-git add .
-git commit -m "Changes"
-git push origin master
-```
+**Recommendation:** Sync at least quarterly, even if just to review changes.
 
 ## Keeping Your Fork Alive
 
-**Why does GitHub care about activity?**
-- GitHub may hide or mark inactive forks as "stale"
-- Regular activity shows the project is maintained
-- Ensures your fork remains discoverable and functional
+GitHub may flag forks as "stale" if inactive. To prevent this:
 
-GitHub may mark forks as "stale" if inactive. To keep it active:
+1. **Regular commits** (even small fixes)
+2. **Enable GitHub Actions** (if present, they create activity)
+3. **Update README** (add your own documentation)
+4. **Star your own fork** (counts as activity)
 
-1. **Regular commits** - Even small updates
-   - Why: Shows the fork is actively maintained
-   
-2. **Periodic syncs** - Pull from upstream occasionally
-   - Why: Demonstrates ongoing engagement with the project
-   
-3. **Enable Actions** - If using GitHub Actions, they keep the repo active
-   - Why: Automated activity counts toward repo health
-   
-4. **Update README** - Add your own documentation
-   - Why: Clarifies your fork's purpose and differences
+**Why keep it active?**
+- GitHub doesn't hide/archiv inactive forks
+- Shows project is maintained
+- Easier to find when you need it
+
+## Common Questions
+
+### Q: Can I completely disconnect from upstream?
+
+**Yes.** Remove the upstream remote:
+```bash
+git remote remove upstream
+```
+
+Your fork becomes fully independent. You'll miss upstream updates but have zero dependencies.
+
+### Q: What if upstream makes a breaking change?
+
+**Don't merge it.** You're not obligated to accept any upstream changes:
+```bash
+git fetch upstream
+# Review changes
+git log upstream/master --oneline
+# Decide not to merge this time
+# Your fork stays on current version
+```
+
+### Q: Can I cherry-pick specific upstream commits?
+
+**Yes.** Instead of full merge, pick specific improvements:
+```bash
+git fetch upstream
+# Get commit hash from upstream
+git cherry-pick abc123def
+# Only applies that specific change
+git push origin master
+```
+
+### Q: What about the license?
+
+Forking respects the GPL v3.0 license. You must:
+- Keep the license file
+- Attribute original authors
+- Share any distributed modifications under same license
+
+Your independence is legal and encouraged!
 
 ## Summary
 
-- **Fork** = Your personal version (full control)
-- **Upstream** = Source of optional updates (your choice to pull)
-- **Why two remotes?** Separates your work from optional external updates
-- **Why sync periodically?** Benefit from fixes while keeping your customizations
-- **Why maintain activity?** Keeps fork healthy and functional on GitHub
+**Your Setup:**
+- Fork = Your personal, independent version
+- Upstream = Read-only source of optional updates
+- One-way flow: upstream → your fork
 
-**Your fork remains independent and customized to your needs** - you decide what changes to accept and when.
+**Your Workflow:**
+1. Work on your fork freely (push to origin)
+2. Periodically fetch from upstream (monthly recommended)
+3. Review and merge upstream changes selectively
+4. Resolve conflicts in favor of your needs
+5. Never push to upstream (you don't have access anyway)
+
+**Your Philosophy:**
+- Independence over contribution
+- Selective adoption of upstream improvements
+- Your customizations take priority
+- Original repo is a resource, not a dependency
+
+**Bottom Line:** Your fork is YOURS. Use upstream as a convenience, not an obligation.
