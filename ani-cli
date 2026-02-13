@@ -48,8 +48,9 @@ help_info() {
     Options:
       -c, --continue
         Continue watching from history
-      -d, --download
-        Download the video instead of playing it
+      -d, --download [path]
+        Download the video instead of playing it. If path is specified, downloads to that folder.
+        If no path is specified, downloads to ./Downloads (created if doesn't exist).
       -D, --delete
         Delete history
       -l, --logview
@@ -66,8 +67,8 @@ help_info() {
         Show the version of the script
       -h, --help
         Show this help message and exit
-      -e, --episode, -r, --range
-        Specify the number of episodes to watch
+      -e, --episode, -r, --range <episode|all>
+        Specify the number of episodes to watch. Use "all" with -d to download all episodes
       --dub
         Play dubbed version
       --rofi
@@ -442,6 +443,15 @@ while [ $# -gt 0 ]; do
         -d | --download)
             [ "$player_function" = "iSH" ] && iSH_DownFix="--async-dns=false"
             player_function=download
+            # Check if next arg is a path (doesn't start with -)
+            if [ $# -gt 1 ] && [ "${2#-}" = "$2" ]; then
+                download_dir="$2"
+                shift
+            else
+                download_dir="./Downloads"
+            fi
+            # Create directory if it doesn't exist
+            [ ! -d "$download_dir" ] && mkdir -p "$download_dir"
             ;;
         -D | --delete)
             : >"$histfile"
@@ -459,7 +469,11 @@ while [ $# -gt 0 ]; do
         -h | --help) help_info ;;
         -e | --episode | -r | --range)
             [ $# -lt 2 ] && die "missing argument!"
-            ep_no="$2"
+            if [ "$2" = "all" ]; then
+                ep_no_all=1
+            else
+                ep_no="$2"
+            fi
             shift
             ;;
         --dub) mode="dub" ;;
@@ -530,7 +544,15 @@ case "$search" in
         allanime_title="$(printf "%s" "$title" | cut -d'(' -f1 | tr -d '[:punct:]')"
         id=$(printf "%s" "$result" | cut -f1)
         ep_list=$(episodes_list "$id")
-        [ -z "$ep_no" ] && ep_no=$(printf "%s" "$ep_list" | nth "Select episode: " "$multi_selection_flag")
+        # Handle -e all flag: populate ep_no with all episodes
+        [ "$ep_no_all" = 1 ] && ep_no="$ep_list"
+        # If download mode, add "all" option to episode selection
+        if [ -z "$ep_no" ] && [ "$player_function" = "download" ]; then
+            ep_no=$(printf "all\n%s" "$ep_list" | nth "Select episode: " "$multi_selection_flag")
+            [ "$ep_no" = "all" ] && ep_no="$ep_list"
+        elif [ -z "$ep_no" ]; then
+            ep_no=$(printf "%s" "$ep_list" | nth "Select episode: " "$multi_selection_flag")
+        fi
         [ -z "$ep_no" ] && exit 1
         ;;
 esac
