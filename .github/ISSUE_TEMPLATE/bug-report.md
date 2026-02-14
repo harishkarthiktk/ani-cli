@@ -6,7 +6,9 @@ labels: 'priority 2: medium, type: bug'
 assignees: ''
 
 ---
-## **Make sure you are on the latest version by running `ani-cli -U`**
+## **Make sure you are on the latest version**
+- **Git clone users**: Run `git pull` in your ani-cli directory
+- **Package manager users**: Update via your package manager
 
 **Metadata (please complete the following information)**
 Version: [e.g. 4.7.6, run `ani-cli -V` to find out]

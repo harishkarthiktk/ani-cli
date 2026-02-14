@@ -83,6 +83,19 @@ git commit -m "My custom feature"
 git push origin master  # Only goes to YOUR fork
 ```
 
+### Updating Your Fork
+
+**Note:** The `-U`/`--update` flag has been removed from this fork. Use git commands instead:
+
+```bash
+# Update from your fork's origin (your changes)
+git pull origin master
+
+# Or update from upstream (original repo improvements)
+git fetch upstream
+git merge upstream/master
+```
+
 **Why push only to origin?**
 - `origin` is YOUR fork - you have full control
 - You never push to upstream (original repo) - you don't have permission and don't want to

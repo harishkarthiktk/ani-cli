@@ -13,6 +13,7 @@ This guide contains all installation instructions and dependencies for ani-cli.
   - [Android](#android)
   - [WSL](#wsl)
 - [Install from Source](#install-from-source)
+- [Updating ani-cli](#updating-ani-cli)
 - [Uninstall](#uninstall)
 - [Troubleshooting](#troubleshooting)
 
@@ -117,7 +118,6 @@ Required only if you want to download episodes:
 - **ani-skip** - Automatically skip anime intros/outros (mpv only)
 - **syncplay** - Watch anime synchronously with friends
 - **rofi** - Alternative to fzf for the interactive menu (use with `--rofi` flag)
-- **patch** - Required for self-updating (`ani-cli -U`)
 - **git** - Required for installing from source
 - **logger** - For episode logging on Linux/macOS
 
@@ -219,11 +219,6 @@ scoop install yt-dlp aria2
 # Optional: scoop install vlc
 ```
 
-7. **Update ani-cli:**
-```sh
-ani-cli -U
-```
-
 #### Windows Known Issues
 
 - **Stuck in "Search anime:"**: Use Windows Terminal, not Git Bash terminal (mintty)
@@ -294,6 +289,64 @@ Verify installation:
 ani-cli --help
 ```
 
+## Updating ani-cli
+
+The `-U`/`--update` flag has been removed. Use the appropriate method for your installation:
+
+### Git Clone Users
+
+If you cloned the repository:
+```sh
+cd /path/to/ani-cli
+git pull
+```
+
+For forks, this will pull from your fork's origin by default.
+
+### Package Manager Users
+
+Use your system's package manager:
+
+**Debian/Ubuntu:**
+```sh
+sudo apt update && sudo apt upgrade ani-cli
+```
+
+**Fedora:**
+```sh
+sudo dnf update ani-cli
+```
+
+**macOS (Homebrew):**
+```sh
+brew update && brew upgrade ani-cli
+```
+
+**Arch Linux:**
+```sh
+yay -Syu ani-cli
+# or: sudo pacman -Syu ani-cli
+```
+
+**Windows (Scoop):**
+```sh
+scoop update ani-cli
+```
+
+**Android (Termux):**
+```sh
+pkg up
+```
+
+### Source Installation
+
+If you installed from source using `sudo cp`, repeat the installation steps:
+```sh
+cd ani-cli
+git pull
+sudo cp ani-cli /usr/local/bin
+```
+
 ## Uninstall
 
 ### Linux
@@ -362,7 +415,8 @@ rm "$PREFIX/bin/ani-cli"
 ### Common Issues
 
 1. **"No results found"**
-   - Update to latest version: `sudo ani-cli -U` (Linux/Mac/Android) or `ani-cli -U` (Windows)
+   - **Git clone users**: Run `git pull` in your ani-cli directory to get latest updates
+   - **Package manager users**: Update via your package manager (`sudo apt upgrade`, `brew upgrade`, etc.)
    - If issue persists, open a GitHub issue
 
 2. **Missing dependencies**
