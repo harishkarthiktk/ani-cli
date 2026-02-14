@@ -1,0 +1,14 @@
+# Downloads folder
+/Downloads/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.swp
+*~
