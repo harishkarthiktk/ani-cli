@@ -13,6 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".flv", ".wmv", ".webm", ".m4v", ".ts", ".m2ts"}
 
@@ -156,22 +157,18 @@ def main():
     total = len(files)
 
     print(f"Found {total} video file(s) in: {folder}")
-    print("Scanning... (this may take a while)\n")
 
     results = []
-    processed = 0
     with ThreadPoolExecutor(max_workers=min(4, total)) as executor:
         futures = {executor.submit(scan_file, f): f for f in files}
-        for future in as_completed(futures):
+        for future in tqdm(as_completed(futures), total=total, unit="file", desc="Scanning", position=0, leave=True):
             result = future.result()
             results.append(result)
-            processed += 1
             path = result["path"]
-            print(f"[{processed}/{total}] {path.name} ...", end=" ", flush=True)
             if result["error_count"] == 0:
-                print("OK")
+                tqdm.write(f"{path.name} ... OK")
             else:
-                print(f"CORRUPTED ({result['error_count']} error lines)")
+                tqdm.write(f"{path.name} ... CORRUPTED ({result['error_count']} error lines)")
 
     # Sort by filename for consistent report output
     results.sort(key=lambda r: r["path"].name)

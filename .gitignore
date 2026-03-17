@@ -1,6 +1,6 @@
 # Downloads folder
 /Downloads/
-
+__pycache__
 # macOS
 .DS_Store
 
