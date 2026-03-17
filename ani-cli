@@ -125,6 +125,19 @@ dep_ch() {
     done
 }
 
+sanitize_filename() {
+    # Remove control characters, replace characters invalid on Windows/macOS/Linux
+    result=$(printf "%s" "$1" \
+        | tr -d '\000-\037' \
+        | sed 's|[<>:"/\\|?*]|_|g; s|[[:space:]][[:space:]]*| |g; s|^[[:space:]]*||; s|[[:space:]]*$||; s|^\.*||')
+    # Handle Windows reserved filenames (case-insensitive match)
+    case "$(printf '%s' "$result" | tr '[:lower:]' '[:upper:]')" in
+        CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9]) result="${result}_" ;;
+    esac
+    [ -z "$result" ] && result="unnamed"
+    printf "%s" "$result"
+}
+
 where_iina() {
     [ -e "/Applications/IINA.app/Contents/MacOS/iina-cli" ] && echo "/Applications/IINA.app/Contents/MacOS/iina-cli" && return 0
     printf "%s" "iina" && return 0
@@ -522,7 +535,7 @@ case "$search" in
         title=$(printf "%s" "$anime_list" | grep "$id" | cut -f2 | sed 's/ - episode.*//')
         ep_list=$(episodes_list "$id")
         ep_no=$(printf "%s" "$anime_list" | grep "$id" | cut -f2 | sed -nE 's/.*- episode (.+)$/\1/p')
-        allanime_title="$(printf "%s" "$title" | cut -d'(' -f1 | tr -d '[:punct:]')"
+        allanime_title="$(sanitize_filename "$(printf "%s" "$title" | cut -d'(' -f1)")"
         ;;
     *)
         if [ "$use_external_menu" = "0" ]; then
@@ -536,15 +549,22 @@ case "$search" in
         # for checking new releases by specifying anime name
         [ "$search" = "nextep" ] && time_until_next_ep "$query"
 
+        query_raw="$query"
         query=$(printf "%s" "$query" | sed "s| |+|g")
+        [ "$log_episode" = 1 ] && command -v logger >/dev/null && logger -t ani-cli "search: $query_raw"
         anime_list=$(search_anime "$query")
         [ -z "$anime_list" ] && die "No results found!"
         [ "$index" -eq "$index" ] 2>/dev/null && result=$(printf "%s" "$anime_list" | sed -n "${index}p")
         [ -z "$index" ] && result=$(printf "%s" "$anime_list" | nl -w 2 | sed 's/^[[:space:]]//' | nth "Select anime: ")
         [ -z "$result" ] && exit 1
         title=$(printf "%s" "$result" | cut -f2)
-        allanime_title="$(printf "%s" "$title" | cut -d'(' -f1 | tr -d '[:punct:]')"
+        allanime_title="$(sanitize_filename "$(printf "%s" "$title" | cut -d'(' -f1)")"
+        [ "$log_episode" = 1 ] && command -v logger >/dev/null && logger -t ani-cli "selected anime: $title"
         id=$(printf "%s" "$result" | cut -f1)
+        if [ "$player_function" = "download" ]; then
+            download_dir="${download_dir}/${allanime_title}"
+            mkdir -p "$download_dir"
+        fi
         ep_list=$(episodes_list "$id")
         # Handle -e all flag: populate ep_no with all episodes
         [ "$ep_no_all" = 1 ] && ep_no="$ep_list"
@@ -556,6 +576,7 @@ case "$search" in
             ep_no=$(printf "%s" "$ep_list" | nth "Select episode: " "$multi_selection_flag")
         fi
         [ -z "$ep_no" ] && exit 1
+        [ "$log_episode" = 1 ] && command -v logger >/dev/null && logger -t ani-cli "selected episodes: $ep_no"
         ;;
 esac
 [ "$skip_intro" = 1 ] && mal_id="$(ani-skip -q "${skip_title:-${title}}")"
