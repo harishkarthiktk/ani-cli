@@ -51,6 +51,10 @@ help_info() {
       -d, --download [path]
         Download the video instead of playing it. If path is specified, downloads to that folder.
         If no path is specified, downloads to ./Downloads (created if doesn't exist).
+      -f, --fresh
+        Delete partial download and aria2 control file before downloading (forces fresh download).
+      --verbose
+        Show verbose aria2c output during download.
       -D, --delete
         Delete history
       -l, --logview
@@ -311,8 +315,10 @@ download() {
             # [ -e "$download_dir/$2.vtt" ] && ffmpeg -i "$download_dir/$2.mp4" -i "$download_dir/$2.vtt" -c copy -c:s mov_text "$download_dir/$2.bak.mp4" && mv "$download_dir/$2.bak.mp4" "$download_dir/$2.mp4"
             ;;
         *)
+            [ "$fresh_download" = 1 ] && rm -f "$download_dir/$2.mp4" "$download_dir/$2.mp4.aria2"
+            [ "$verbose_download" = 1 ] && _aria2_extra="--summary-interval=1" || _aria2_extra="--summary-interval=0 --download-result=hide"
             # shellcheck disable=SC2086
-            aria2c --referer="$allanime_refr" --enable-rpc=false --check-certificate=false --continue $iSH_DownFix --summary-interval=0 -x 16 -s 16 "$1" --dir="$download_dir" -o "$2.mp4" --download-result=hide
+            aria2c --referer="$allanime_refr" --enable-rpc=false --check-certificate=false --continue $iSH_DownFix -x 8 -s 8 "$1" --dir="$download_dir" -o "$2.mp4" $_aria2_extra
             ;;
     esac
 }
@@ -456,6 +462,8 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         -c | --continue) search=history ;;
+        -f | --fresh) fresh_download=1 ;;
+        --verbose) verbose_download=1 ;;
         -d | --download)
             [ "$player_function" = "iSH" ] && iSH_DownFix="--async-dns=false"
             player_function=download
