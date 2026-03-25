@@ -6,6 +6,7 @@ Usage:
     python scan_videos.py -d /path/to/folder
     python scan_videos.py -d /path/to/folder -o
     python scan_videos.py -d /path/to/folder -o report.txt
+    python scan_videos.py -f /path/to/file.mkv
 """
 
 import argparse
@@ -86,12 +87,15 @@ def scan_folder(folder: Path) -> list:
     return files
 
 
-def build_report(results: list, folder: Path) -> str:
+def build_report(results: list, folder: Path, single_file_mode: bool = False) -> str:
     lines = []
     lines.append("=" * 70)
     lines.append("VIDEO INTEGRITY SCAN REPORT")
-    lines.append(f"Folder : {folder}")
-    lines.append(f"Files  : {len(results)}")
+    if single_file_mode:
+        lines.append(f"File   : {results[0]['path']}")
+    else:
+        lines.append(f"Folder : {folder}")
+        lines.append(f"Files  : {len(results)}")
 
     ok = [r for r in results if r["error_count"] == 0]
     bad = [r for r in results if r["error_count"] > 0]
@@ -136,8 +140,12 @@ def main():
         description="Scan video files for corruption using ffmpeg."
     )
     parser.add_argument(
-        "-d", "--directory", required=True,
+        "-d", "--directory",
         help="Folder containing video files to scan."
+    )
+    parser.add_argument(
+        "-f", "--file",
+        help="Single video file to scan."
     )
     parser.add_argument(
         "-o", "--output", nargs="?", const="report.txt", default=None,
@@ -146,35 +154,62 @@ def main():
     )
     args = parser.parse_args()
 
+    if not args.directory and not args.file:
+        parser.error("one of -d/--directory or -f/--file is required.")
+
     check_ffmpeg()
 
-    folder = Path(args.directory).resolve()
-    if not folder.is_dir():
-        print(f"ERROR: Not a valid directory: {folder}")
-        sys.exit(1)
+    if args.file:
+        file_path = Path(args.file).resolve()
+        if not file_path.is_file():
+            print(f"ERROR: Not a valid file: {file_path}")
+            sys.exit(1)
+        if file_path.suffix.lower() not in VIDEO_EXTENSIONS:
+            print(f"ERROR: Not a recognized video file: {file_path}")
+            sys.exit(1)
+        files = [file_path]
+        folder = file_path.parent
+    else:
+        folder = Path(args.directory).resolve()
+        if not folder.is_dir():
+            print(f"ERROR: Not a valid directory: {folder}")
+            sys.exit(1)
+        files = scan_folder(folder)
 
-    files = scan_folder(folder)
     total = len(files)
+    single_file_mode = args.file is not None
 
-    print(f"Found {total} video file(s) in: {folder}")
+    if single_file_mode:
+        print(f"Scanning: {files[0]}")
+    else:
+        print(f"Found {total} video file(s) in: {folder}")
 
     results = []
-    with ThreadPoolExecutor(max_workers=min(4, total)) as executor:
-        futures = {executor.submit(scan_file, f): f for f in files}
-        for future in tqdm(as_completed(futures), total=total, unit="file", desc="Scanning", position=0, leave=True):
-            result = future.result()
-            results.append(result)
-            path = result["path"]
-            if result["error_count"] == 0:
-                tqdm.write(f"{path.name} ... OK")
-            else:
-                tqdm.write(f"{path.name} ... CORRUPTED ({result['error_count']} error lines)")
+    if single_file_mode:
+        result = scan_file(files[0])
+        results.append(result)
+        path = result["path"]
+        if result["error_count"] == 0:
+            print(f"{path.name} ... OK")
+        else:
+            print(f"{path.name} ... CORRUPTED ({result['error_count']} error lines)")
+    else:
+        with ThreadPoolExecutor(max_workers=min(4, total)) as executor:
+            futures = {executor.submit(scan_file, f): f for f in files}
+            for future in tqdm(as_completed(futures), total=total, unit="file", desc="Scanning", position=0, leave=True):
+                result = future.result()
+                results.append(result)
+                path = result["path"]
+                if result["error_count"] == 0:
+                    tqdm.write(f"{path.name} ... OK")
+                else:
+                    tqdm.write(f"{path.name} ... CORRUPTED ({result['error_count']} error lines)")
 
     # Sort by filename for consistent report output
     results.sort(key=lambda r: r["path"].name)
 
     print()
-    report = build_report(results, folder)
+    report = build_report(results, folder, single_file_mode)
     print(report)
 
     if args.output:
